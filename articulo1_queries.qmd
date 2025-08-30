@@ -9,23 +9,20 @@ format: html
 editor: visual
 ---
 
-## Quarto
+Equipo 7
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+## Query 1
 
-## Running Code
+¿Cuál es la probabilidad de que el automóvil sea el medio de transporte de un hombre, dado que su propósito de viaje es ir a un acto religioso?
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## Query 2
 
-```{r}
-1 + 1
-```
+¿Cuál es la probabilidad de que un viaje con duración mayor a 60 minutos se realice en transporte motorizado versus un viaje con transporte no motorizado?
 
-You can add options to executable code like this
+## Query 3
 
-```{r}
-#| echo: false
-2 * 2
-```
+¿Cuál es la probabilidad de que el viaje del hogar a la escuela dure más de 60 minutos si la persona usa transporte escolar?
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## Query 4
+
+¿Qué probabilidad hay que una persona de Zacatecas de estrato alto haya utilizado transporte público (tren suburbano, tren ligero y autobús) durante los sábados?
