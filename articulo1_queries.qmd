@@ -2,18 +2,41 @@
 title: "Articulo 1: Queries"
 authors:
   - name: Jorge Nevarez - A01645313
-  - name: Alfredo Lopez
-  - name: Damian Luna
-  - name: Diana Hernandez
+  - name: Alfredo Lopez - A01638976
+  - name: Damian Luna - A01645865
+  - name: Diana Hernandez - A01639515
 format: html
 editor: visual
 ---
 
-Equipo 7
+# Abstract
+
+Urban mobility in Mexico is shaped by socioeconomic, demographic, and contextual factors that affect both transport mode choice and travel time. We apply multinomial Bayesian networks to the 2017 Origin–Destination Survey (INEGI) to model these dependencies under uncertainty. We specified three candidate directed acyclic graphs (DAGs) and fitted them by maximum likelihood, comparing model fit with BIC/AIC. DAG 3 achieved the best fit (BIC = −1,094,177; AIC = −985,745.9), and we use it as the reference model to answer four policy-relevant queries: (i) automobile use by men given religious travel purpose, (ii) the probability that trips longer than 60 minutes are motorized versus non-motorized, (iii) the probability that home-to-school trips exceed 60 minutes when school transport is used, and (iv) the likelihood of public transport use (bus, light rail, suburban rail) among high-stratum individuals in Cuauhtémoc borough on Saturdays.
+
+Results indicate that the probability of automobile use by men attending religious trips is **20.6%** (Query 1). For long trips (greater than 60 minutes), motorized transport strongly dominates: the conditional probability of using a motorized mode is **80.9%**, compared to **19.3%** for non-motorized (Query 2). The probability that home-to-school trips last more than 60 minutes when using school transport is very low (**1.9%**) (Query 3). Finally, the likelihood of high-stratum individuals in Cuauhtémoc borough using public transport on Saturdays is also low (**2.1%**) (Query 4). These findings highlight the usefulness of Bayesian networks to capture interdependencies in travel behavior and to inform evidence-based urban mobility planning.
+
+**Keywords:** Bayesian networks, transport, multinomial models, DAG, urban mobility, Mexico
+
+# Introducción
+
+La movilidad urbana en México enfrenta el reto de explicar cómo factores sociodemográficos, económicos y contextuales determinan tanto la elección del modo de transporte como la duración de los viajes. Estudios previos han mostrado la influencia del estrato socioeconómico y el género en los patrones de movilidad, pero los enfoques tradicionales suelen ser insuficientes para capturar las complejas dependencias entre múltiples variables.
+
+La Encuesta Origen Destino 2017 (INEGI) ofrece un panorama detallado de los motivos de viaje, tiempos de traslado y medios de transporte utilizados en áreas metropolitanas. En este trabajo, analizamos cómo el sexo, el estrato social, el día de la semana y motivaciones específicas como los viajes religiosos o escolares afectan la probabilidad de usar determinados modos de transporte y de realizar trayectos largos.
+
+Para ello empleamos redes bayesianas multinomiales, una herramienta que permite representar relaciones de dependencia mediante grafos dirigidos y estimar probabilidades condicionales bajo incertidumbre. Nuestra hipótesis es que estas interacciones no lineales entre factores sociales y contextuales pueden modelarse de forma más precisa con este enfoque, generando evidencia útil para la planificación del transporte y la formulación de políticas públicas de movilidad.
+
+# Metologia
+
+El trabajo se basó en el uso de redes bayesianas multinomiales para modelar dependencias entre variables sociodemográficas, contextuales y decisiones de transporte. El enfoque siguió un procedimiento reproducible en cuatro etapas principales.
+
+En primer lugar, se realizó una limpieza del archivo Excel original de la Encuesta Origen–Destino 2017, seleccionando únicamente las variables necesarias para el análisis y generando un nuevo archivo en formato .csv. Esto permitió trabajar con una base de datos depurada y de menor tamaño, enfocada en los atributos relevantes para el estudio.
+
+Posteriormente, las variables continuas se discretizaron en categorías de interés, entre ellas la duración de viaje mayor a 60 minutos (dur_60). Las variables cualitativas se transformaron en factores categóricos para garantizar compatibilidad con los algoritmos de bnlearn, incluyendo: sexo, acto_religioso, motorizado, automovil, modo_ok, es_sabado, origen, estrato_alto, st_cuauh, destino y transporte_escolar.
+
+De manera particular, la columna original “tra_p5_14”, que contenía información sobre los distintos modos de transporte, fue descompuesta en tres variables derivadas: automovil (uso o no de automóvil), motorizado (uso de cualquier modo motorizado) y `modo_ok` (identificación de transporte público: autobús, tren ligero o tren suburbano). Una vez generadas estas variables, la columna original fue eliminada para evitar redundancias.
 
 ```{r}
-#setup global e importacion de librerias
-set.seed(1234) #utilizamos una semilla para reproductibilidad
+set.seed(1234) 
 library(bnlearn)
 ```
 
@@ -69,7 +92,11 @@ names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
 head(data)
 ```
 
-## DAG 1   
+Posteriormente, se propusieron tres grafos acíclicos dirigidos (DAGs) que reflejaban hipótesis alternativas sobre las dependencias causales. Cada DAG fue implementado en el entorno R utilizando la librería bnlearn.
+
+## DAG 1
+
+El uso de automóvil está condicionado por el sexo y el acto religioso. La elección de transporte público (modo_ok, que incluye autobús, tren ligero y tren suburbano) depende de sexo, estrato socioeconómico, día de la semana (sábado) y acto religioso. Tanto automovil como modo_ok determinan si un viaje es motorizado. Finalmente, el hecho de ser motorizado, junto con acto religioso y es_sabado, afecta la probabilidad de que el viaje dure más de 60 minutos (dur_60).
 
 ```{r}
 nodes <- c("sexo", "acto_religioso", "automovil", 
@@ -119,7 +146,9 @@ score(dag, data = datos, type = "aic")
 arc.strength(dag, data = datos, criterion = "mi")
 ```
 
-## Creacion DAG 2
+## DAG 2
+
+La variable automovil depende de sexo, estrato socioeconómico, acto religioso, día sábado, origen y destino. El modo_ok depende de origen, destino, es_sabado y estrato_alto. La condición de motorizado está determinada por automovil y modo_ok. El transporte_escolar depende de estrato socioeconómico, origen y destino. Finalmente, la duración del viaje (dur_60) está influida por origen, destino, modo_ok, automovil, motorizado y transporte_escolar.
 
 ```{r}
 dag_2 <- empty.graph(nodes = c("sexo", "acto_religioso", "automovil", "motorizado",
@@ -224,7 +253,9 @@ Dados estos resultados podriamos eliminar los siguientes arcos ya que superan 0.
 & \text{transporte\_escolar} \to \text{dur\_60}
 \end{aligned}
 
-# Dag 3 José Alfredo López
+## DAG 3
+
+La duración del viaje (dur_60) depende de automovil, motorizado y modo_ok. La variable automovil depende de acto religioso, sexo, destino y estrato socioeconómico. Tanto motorizado, es_sabado y transporte_escolar dependen de destino. El destino depende a su vez de acto religioso, sexo y estrato socioeconómico. El st_cuauh y el modo_ok dependen de origen y estrato socioeconómico, mientras que origen depende de estrato socioeconómico.
 
 ```{r}
 dag_3 = empty.graph(nodes = c('sexo',
@@ -272,7 +303,11 @@ dag_3
 graphviz.plot(dag_3, shape = "ellipse")
 ```
 
-### Red Bayesiana
+se realizó el ajuste de parámetros por máxima verosimilitud para cada DAG mediante la función bn.fit del paquete bnlearn, y se evaluó el desempeño de cada estructura utilizando los criterios de información Bayesian Information Criterion (BIC) y Akaike Information Criterion (AIC). Adicionalmente, se utilizó la función arc.strength para comprobar la independencia condicional de los arcos y determinar cuáles dependencias resultaban significativas.
+
+Basándonos en estos scores, la DAG 3 es la que presenta el mejor ajuste a los datos (valores menos negativos de BIC y AIC).
+
+## Red Bayesiana
 
 ```{r}
 bn_mle = bn.fit(dag_3, data=data, method = 'mle')
@@ -299,48 +334,254 @@ arc.strength(dag_3, data = data_clean, criterion = "mi")
 $$
 \begin{aligned}
 & \text{sexo} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
-& \text{estrato_alto} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
-& \text{acto_religioso} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{estrato\_alto} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{acto\_religioso} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
 & \text{destino} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
 & \text{destino} \perp\!\!\!\perp \text{motorizado} : 1.0000000 \\
-& \text{automovil} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
-& \text{motorizado} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{dur\_60} : 1.0000000 \\
+& \text{motorizado} \perp\!\!\!\perp \text{dur\_60} : 1.0000000 \\
 \end{aligned}
-
-$$ \### Dependencias (arcos significativos)
-
 $$
-### Dependencias (arcos significativos)
 
+### Dependencias (arcos significativos)
 
 $$
 \begin{aligned}
 & \text{sexo} \not\!\perp\!\!\!\perp \text{destino} : 8.65\times 10^{-163} \\
-& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{destino} : 3.40\times 10^{-80} \\
-& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{origen} : 1.84\times 10^{-265} \\
-& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{st_cuauh} : 6.67\times 10^{-313} \\
-& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{modo_ok} : 1.29\times 10^{-28} \\
-& \text{acto_religioso} \not\!\perp\!\!\!\perp \text{destino} : 0.0000000 \\
-& \text{destino} \not\!\perp\!\!\!\perp \text{es_sabado} : 0.0000000 \\
-& \text{destino} \not\!\perp\!\!\!\perp \text{transporte_escolar} : 3.27\times 10^{-69} \\
-& \text{origen} \not\!\perp\!\!\!\perp \text{st_cuauh} : 0.0000000 \\
-& \text{origen} \not\!\perp\!\!\!\perp \text{modo_ok} : 9.31\times 10^{-10} \\
-& \text{modo_ok} \not\!\perp\!\!\!\perp \text{dur_60} : 7.90\times 10^{-05} \\
+& \text{estrato\_alto} \not\!\perp\!\!\!\perp \text{destino} : 3.40\times 10^{-80} \\
+& \text{estrato\_alto} \not\!\perp\!\!\!\perp \text{origen} : 1.84\times 10^{-265} \\
+& \text{estrato\_alto} \not\!\perp\!\!\!\perp \text{st\_cuauh} : 6.67\times 10^{-313} \\
+& \text{estrato\_alto} \not\!\perp\!\!\!\perp \text{modo\_ok} : 1.29\times 10^{-28} \\
+& \text{acto\_religioso} \not\!\perp\!\!\!\perp \text{destino} : 0.0000000 \\
+& \text{destino} \not\!\perp\!\!\!\perp \text{es\_sabado} : 0.0000000 \\
+& \text{destino} \not\!\perp\!\!\!\perp \text{transporte\_escolar} : 3.27\times 10^{-69} \\
+& \text{origen} \not\!\perp\!\!\!\perp \text{st\_cuauh} : 0.0000000 \\
+& \text{origen} \not\!\perp\!\!\!\perp \text{modo\_ok} : 9.31\times 10^{-10} \\
+& \text{modo\_ok} \not\!\perp\!\!\!\perp \text{dur\_60} : 7.90\times 10^{-05} \\
 \end{aligned}
 $$
+
+### Hill climbing
+
+```{r}
+
+align_bn_and_data <- function(dag_obj, df) {
+  stopifnot(all(nodes(dag_obj) %in% names(df)))
+  d <- df[, nodes(dag_obj), drop = FALSE]
+
+
+  for (v in names(d)) if (is.character(d[[v]])) d[[v]] <- factor(d[[v]])
+
+
+  d <- droplevels(na.omit(d))
+
+  # Detectar factores con <2 niveles observados previamente
+  ok <- vapply(d, function(x) if (is.factor(x)) nlevels(x) >= 2 else TRUE, logical(1))
+  bad_vars <- names(d)[!ok]
+
+  if (length(bad_vars)) {
+    message("Quitando de la DAG y de los datos por <2 niveles: ",
+            paste(bad_vars, collapse = ", "))
+    # Reducir DAG y data a los nodos "ok"
+    keep <- setdiff(nodes(dag_obj), bad_vars)
+    dag_obj <- subgraph(dag_obj, keep)
+    d <- d[, keep, drop = FALSE]
+  }
+
+  list(dag = dag_obj, data = d)
+}
+
+```
+
+```{r}
+# Helper: prepara data para BN (quita NA y factores con <2 niveles)
+prep_bn_data <- function(df, node_vec) {
+  stopifnot(all(node_vec %in% names(df)))
+  d <- df[, node_vec, drop = FALSE]
+  for (v in names(d)) if (is.character(d[[v]])) d[[v]] <- factor(d[[v]])
+  d <- droplevels(na.omit(d))
+  ok <- vapply(d, function(x) if (is.factor(x)) nlevels(x) >= 2 else TRUE, logical(1))
+  if (any(!ok)) {
+    message("Se eliminan por <2 niveles: ", paste(names(d)[!ok], collapse = ", "))
+    d <- d[, ok, drop = FALSE]
+  }
+  d
+}
+```
+
+```{r}
+nodes_hc <- c("sexo","acto_religioso","automovil","motorizado","dur_60",
+              "es_sabado","estrato_alto","modo_ok","st_cuauh","origen",
+              "destino","transporte_escolar")
+nodes_hc <- intersect(nodes_hc, names(data))
+datos_hc <- prep_bn_data(data, nodes_hc)
+
+set.seed(1234)
+best_dag <- hc(datos_hc, score = "bic")
+modelstring(best_dag)
+
+scores_hc <- c(
+  BIC = score(best_dag, data = datos_hc, type = "bic"),
+  AIC = score(best_dag, data = datos_hc, type = "aic")
+)
+scores_hc
+```
+
+```{r}
+scores_tab <- list()
+if (!exists("best_dag")) {
+  nodes_hc <- c("sexo","acto_religioso","automovil","motorizado","dur_60",
+                "es_sabado","estrato_alto","modo_ok","st_cuauh","origen",
+                "destino","transporte_escolar")
+  nodes_hc <- intersect(nodes_hc, names(data))
+  datos_hc <- data[, nodes_hc, drop = FALSE]
+  for (v in names(datos_hc)) if (is.character(datos_hc[[v]])) datos_hc[[v]] <- factor(datos_hc[[v]])
+  datos_hc <- droplevels(na.omit(datos_hc))
+  set.seed(1234)
+  best_dag <- hc(datos_hc, score = "bic")
+}
+scores_tab[["HC"]] <- c(BIC = score(best_dag, data = datos_hc, type = "bic"),
+                        AIC = score(best_dag, data = datos_hc, type = "aic"))
+
+# DAG 1
+if (exists("dag")) {
+  a1 <- align_bn_and_data(dag, data)
+  scores_tab[["DAG1"]] <- c(BIC = score(a1$dag, data = a1$data, type = "bic"),
+                            AIC = score(a1$dag, data = a1$data, type = "aic"))
+}
+
+# DAG 2
+if (exists("dag_2")) {
+  a2 <- align_bn_and_data(dag_2, data)
+  scores_tab[["DAG2"]] <- c(BIC = score(a2$dag, data = a2$data, type = "bic"),
+                            AIC = score(a2$dag, data = a2$data, type = "aic"))
+}
+
+# DAG 3
+if (exists("dag_3")) {
+  a3 <- align_bn_and_data(dag_3, data)
+  scores_tab[["DAG3"]] <- c(BIC = score(a3$dag, data = a3$data, type = "bic"),
+                            AIC = score(a3$dag, data = a3$data, type = "aic"))
+}
+
+# Tabla ordenada por BIC (en bnlearn, mayor = mejor)
+scores_df <- do.call(rbind, scores_tab)
+scores_df[order(-scores_df[, "BIC"]), , drop = FALSE]
+```
+
+```{r}
+# 1. Visualizar la DAG aprendida por Hill-Climbing
+graphviz.plot(best_dag, shape = "ellipse", main = "DAG aprendida por Hill-Climbing")
+
+# 2. Mostrar la estructura textual de la DAG
+modelstring(best_dag)
+```
+
+Tras haber propuesto y ajustado tres DAGs distintos (DAG1, DAG2 y DAG3), se aplicó el algoritmo de Hill-Climbing para aprender automáticamente la estructura de la red a partir de los datos.
+
+En términos de ajuste estadístico, los resultados indican que Hill-Climbing logra un mejor ajuste (mayor BIC/AIC) en comparación con las estructuras propuestas manualmente.
+
+Sin embargo, al analizar la estructura aprendida (ver gráfica y modelo textual), observamos que el algoritmo conecta variables de forma que no siempre tienen sentido lógico ni causal en el contexto del transporte urbano. Por ejemplo, coloca a acto_religioso como nodo padre de variables como destino y transporte_escolar, lo cual difícilmente refleja una relación realista en la movilidad de la Ciudad de México.
+
+En conclusión, Hill-Climbing puede mejorar los criterios de ajuste estadístico, pero no garantiza interpretabilidad ni validez causal. Por ello, su resultado debe considerarse con precaución: es útil como referencia para comparar ajustes, pero la red propuesta manualmente por los expertos (en este caso, los DAGs diseñados en clase) conserva mayor coherencia en cuanto a la lógica de las relaciones.
+
+# Aplicacion
+
+La validación de los modelos se llevó a cabo a través del cálculo de probabilidades condicionales sobre escenarios de interés en movilidad urbana. Para ello se definieron queries específicas, orientadas a responder preguntas de política pública y patrones de comportamiento: uso del automóvil en viajes religiosos, relación entre duración y transporte motorizado, duración de viajes escolares, y uso del transporte público en población de estrato alto en Cuauhtémoc durante fines de semana.
 
 ## Query 1
 
 ¿Cuál es la probabilidad de que el automóvil sea el medio de transporte de un hombre, dado que su propósito de viaje es ir a un acto religioso?
 
+```{r}
+cpquery(bn_mle, 
+  event = (automovil == "Automovil"), 
+  evidence = (sexo == 1 & acto_religioso == 9), 
+  n = 10^6
+)
+```
+
+La probabilidad estimada de que un hombre utilice automóvil cuando el motivo del viaje es religioso es de 20.6%. Este resultado refleja que, aunque el automóvil se usa en parte de los desplazamientos hacia actividades religiosas, la mayoría de los viajes de este tipo se realizan mediante otros medios (posiblemente transporte público o caminata). Esto sugiere que el factor religioso no está fuertemente asociado con la elección del automóvil en comparación con otras variables contextuales.
+
 ## Query 2
 
 ¿Cuál es la probabilidad de que un viaje con duración mayor a 60 minutos se realice en transporte motorizado versus un viaje con transporte no motorizado?
+
+```{r}
+# Probabilidad de que un viaje >60min sea motorizado
+p_motorizado <- cpquery(
+  bn_mle, 
+  event = (motorizado == "Motorizado"),
+  evidence = (dur_60 == "Mayor_1h"),
+  n = 10^6
+)
+
+# Probabilidad de que un viaje >60min sea NO motorizado
+p_no_motorizado <- cpquery(
+  bn_mle, 
+  event = (motorizado == "No_motorizado"),
+  evidence = (dur_60 == "Mayor_1h"),
+  n = 10^6
+)
+
+p_motorizado
+p_no_motorizado
+
+
+```
+
+Condicionado a trayectos mayores a 60 minutos, la probabilidad de usar un medio motorizado es de 80.9%, mientras que para un medio no motorizado es de apenas 19.3%. Este hallazgo confirma la expectativa de que los viajes largos en la Ciudad de México dependen casi siempre de modos motorizados, dada la dificultad de sostener recorridos extensos a pie o en bicicleta. Además, la razón de probabilidades muestra una clara ventaja del transporte motorizado frente al no motorizado.
 
 ## Query 3
 
 ¿Cuál es la probabilidad de que el viaje del hogar a la escuela dure más de 60 minutos si la persona usa transporte escolar?
 
+```{r}
+q3 <- cpquery(bn_mle, 
+              event = (dur_60 == "Mayor_1h"), 
+              evidence = (transporte_escolar == "1"), n = 10^6)
+q3
+```
+
+La probabilidad de que un viaje del hogar a la escuela dure más de 60 minutos cuando se utiliza transporte escolar es de apenas 1.9%. Esto indica que, en la mayoría de los casos, el transporte escolar está asociado con recorridos relativamente cortos, probablemente debido a la planeación de rutas locales y a la cercanía entre las viviendas y los centros educativos.
+
 ## Query 4
 
-¿Qué probabilidad hay que una persona de Zacatecas de estrato alto haya utilizado transporte público (tren suburbano, tren ligero y autobús) durante los sábados?
+Finalmente, en la cuarta query se estimó la probabilidad de que personas de estrato alto utilicen transporte público (tren suburbano, tren ligero o autobús) durante los sábados en la alcaldía Cuauhtémoc.
+
+La query original planteada para el equipo fue:
+
+“¿Qué probabilidad hay que una persona de Zacatecas de estrato alto haya utilizado transporte público (tren suburbano, tren ligero y autobús) durante los sábados?”
+
+Sin embargo, al revisar la base de datos proporcionada (ttransporte de la Encuesta Origen-Destino 2017), se identificó que la información disponible corresponde exclusivamente a trayectos dentro de la Ciudad de México. En consecuencia, no es posible responder una pregunta que involucre directamente a un estado externo como Zacatecas, dado que dicha entidad no se encuentra representada en el conjunto de datos.
+
+Para mantener la lógica y el espíritu de la consulta y analizar el comportamiento de individuos de estrato alto en relación con el transporte público y los días sábado; se decidió ajustar la query. En la versión modificada, se sustituyó la referencia a Zacatecas por la alcaldía Cuauhtémoc, que sí está representada en el dataset a través de los códigos de estaciones.
+
+De este modo, la query final utilizada en el análisis fue:
+
+¿Qué probabilidad hay que una persona de estrato alto haya subido al transporte público (tren suburbano, tren ligero y autobús) en una estación que corresponde a la alcaldía Cuauhtémoc durante los sábados?
+
+Este cambio asegura la coherencia entre la pregunta de investigación y la información disponible en la base de datos, permitiendo calcular una probabilidad válida y consistente.
+
+```{r}
+cpquery(
+  bn_mle,
+  event    = (modo_ok %in% c(6, 12, 13)),
+  evidence = (estrato_alto == 4 & st_cuauh == 6 & es_sabado == 2),
+  n = 10^6
+)
+```
+
+La probabilidad de que individuos de estrato alto en la alcaldía Cuauhtémoc utilicen transporte público (autobús, tren ligero o tren suburbano) durante los sábados es de 2.1%. Este valor, muy bajo, refleja la fuerte preferencia de los sectores de mayor ingreso por modos privados de transporte, principalmente el automóvil, y sugiere desigualdades persistentes en el acceso y uso del transporte público.
+
+# Conclusiones
+
+El estudio aplicó redes bayesianas multinomiales para analizar la movilidad urbana en la Ciudad de México con base en la Encuesta Origen–Destino 2017. Se probaron tres estructuras iniciales (DAG1, DAG2 y DAG3) y se compararon con el algoritmo Hill-Climbing. Aunque Hill-Climbing alcanzó mejores valores de BIC y AIC, generó relaciones poco lógicas, por lo que se eligió la DAG3 como modelo más coherente para interpretar los datos.
+
+Las consultas realizadas mostraron patrones claros. La probabilidad de que un hombre use automóvil en viajes religiosos fue baja (20.6%), mientras que en los trayectos mayores a una hora predominó el transporte motorizado (80.9% frente a 19.3% no motorizado). El transporte escolar presentó una probabilidad mínima de viajes largos (1.9%), lo que refleja su carácter local, y el estrato alto en Cuauhtémoc tuvo una probabilidad muy baja de usar transporte público en sábado (2.1%).
+
+Estos resultados confirman desigualdades en la elección modal y refuerzan la importancia de métodos probabilísticos para analizar relaciones complejas. Entre las limitaciones se encuentra la necesidad de discretizar y simplificar variables, lo que puede reducir detalles del fenómeno. A futuro, conviene probar más variables y técnicas que combinen buen ajuste estadístico con interpretaciones más realistas.
+
+# Referencias
+
+Scutari, M. (s.f.). bnlearn: Bayesian network structure learning, parameter learning and inference. Recuperado el 31 de agosto de 2025, de <https://www.bnlearn.com/>
