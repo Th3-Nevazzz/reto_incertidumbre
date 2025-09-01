@@ -11,6 +11,272 @@ editor: visual
 
 Equipo 7
 
+```{r}
+#setup global e importacion de librerias
+set.seed(1234) #utilizamos una semilla para reproductibilidad
+library(bnlearn)
+```
+
+```{r}
+data = read.csv('data/base_unida.csv',stringsAsFactors = TRUE)
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+# Variables categóricas
+vars_factor <- c("tra_sexo", "via_p5_13", "tra_p5_14",
+                 "tra_p5_3", "tra_estrato", "tra_p5_17_1c",
+                 "via_p5_6", "via_p5_11a", "via_p5_14_18")
+data[vars_factor] <- lapply(data[vars_factor], as.factor)
+
+# Crear variable binaria de duración (>1 hora)
+data$dur_60 <- ifelse(data$tra_p5_16_1_1 > 1, "Mayor_1h", "Menor_igual_1h")
+data$dur_60 <- factor(data$dur_60)
+
+# Variables derivadas de tra_p5_14 siendo estas: Automovil, Motorizado, modo_ok
+data$automovil <- ifelse(data$tra_p5_14 == 1, "Automovil", "No_Automovil") #saber si utiliza automovil
+data$automovil <- factor(data$automovil)
+
+data$motorizado <- ifelse(data$tra_p5_14 %in% 
+                            c(1,2,3,4,5,6,8,9,10,11,12,13,15,17,18,19,20), 
+                          "Motorizado", "No_motorizado") #saber si utiliza un vehiculo motorizado para viajar o no
+data$motorizado <- factor(data$motorizado)
+
+data$modo_ok <- ifelse(data$tra_p5_14 %in% c(6,12,13),
+                       as.character(data$tra_p5_14), "Otro") #identificar si utiliza transporte publico u otro vehiculo
+data$modo_ok <- factor(data$modo_ok)
+
+# Eliminar la columna original para evitar conflictos
+data$tra_p5_14 <- NULL
+data$tra_p5_16_1_1 <- NULL
+
+```
+
+```{r}
+# Renombrar columnas para evitar errores
+names(data)[names(data) == "tra_sexo"]     <- "sexo"
+names(data)[names(data) == "via_p5_13"]    <- "acto_religioso"
+names(data)[names(data) == "tra_estrato"]  <- "estrato_alto"
+names(data)[names(data) == "tra_p5_17_1c"] <- "st_cuauh"
+names(data)[names(data) == "tra_p5_3"]     <- "es_sabado"
+names(data)[names(data) == "via_p5_6"]     <- "origen"
+names(data)[names(data) == "via_p5_11a"]   <- "destino"
+names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
+
+head(data)
+```
+
+## Creacion DAG 2
+
+```{r}
+dag_2 <- empty.graph(nodes = c("sexo", "acto_religioso", "automovil", "motorizado",
+                               "dur_60", "es_sabado", "estrato_alto", "modo_ok",
+                               "origen", "destino", "transporte_escolar", "st_cuauh"))
+
+```
+
+```{r}
+arc_set_2 <- matrix(c(
+  "sexo", "automovil",
+  "estrato_alto", "automovil",
+  "acto_religioso", "automovil",
+  "es_sabado", "automovil",
+  "origen", "automovil",
+  "destino", "automovil",
+  
+  "origen", "modo_ok",
+  "destino", "modo_ok",
+  "es_sabado", "modo_ok",
+  "estrato_alto", "modo_ok",
+  
+  "automovil", "motorizado",
+  "modo_ok", "motorizado",
+  
+  "estrato_alto", "transporte_escolar",
+  "origen", "transporte_escolar",
+  "destino", "transporte_escolar",
+  
+  # Padres de duración
+  "origen", "dur_60",
+  "destino", "dur_60",
+  "modo_ok", "dur_60",
+  "automovil", "dur_60",
+  "motorizado", "dur_60",
+  "transporte_escolar", "dur_60"
+), byrow = TRUE, ncol = 2,
+dimnames = list(NULL, c("from", "to")))
+```
+
+```{r}
+arcs(dag_2) = arc_set_2
+graphviz.plot(dag_2, shape = "ellipse")
+```
+
+```{r}
+bn_2 = bn.fit(dag_2, data = data)
+```
+
+```{r}
+data_clean <- na.omit(data)
+score(dag_2, data = data_clean, type = "bic")
+score(dag_2, data = data_clean, type = "aic")
+```
+
+```{r}
+arc.strength(dag_2, data = data, criterion = "mi")
+```
+
+Tras realizar la fuerza de dependencia probabilista obtuvimos los siguientes resultados:
+
+\begin{aligned}
+& \text{automovil} \perp\!\!\!\perp \text{sexo} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{estrato\_alto} : 0.0147075 \\
+& \text{automovil} \perp\!\!\!\perp \text{acto\_religioso} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{es\_sabado} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{origen} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{destino} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{origen} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{destino} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{es\_sabado} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{estrato\_alto} : 1.0000000 \\
+& \text{motorizado} \perp\!\!\!\perp \text{automovil} : 0.0000000 \\
+& \text{motorizado} \perp\!\!\!\perp \text{modo\_ok} : 0.0000000 \\
+& \text{transporte\_escolar} \perp\!\!\!\perp \text{estrato\_alto} : 0.9999994 \\
+& \text{transporte\_escolar} \perp\!\!\!\perp \text{origen} : 0.0000000 \\
+& \text{transporte\_escolar} \perp\!\!\!\perp \text{destino} : 0.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{origen} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{destino} : 9.981721 \times 10^{-109} \\
+& \text{dur\_60} \perp\!\!\!\perp \text{modo\_ok} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{motorizado} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{transporte\_escolar} : 1.0000000
+\end{aligned}
+
+Dados estos resultados podriamos eliminar los siguientes arcos ya que superan 0.05 haciendolos no significativos:
+
+\begin{aligned}
+& \text{sexo} \to \text{automovil}\\
+& \text{acto\_religioso} \to\text{automovil}\\
+& \text{es\_sabado} \to \text{automovil}\\
+& \text{origen} \to \text{automovil}\\
+& \text{destino} \to \text{automovil}\\
+& \text{origen} \to \text{modo\_ok}\\
+& \text{destino} \to \text{modo\_ok}\\
+& \text{es\_sabado} \to \text{modo\_ok}\\
+& \text{estrato\_alto} \to \text{modo\_ok} \\
+& \text{estrato\_alto} \to \text{transporte\_escolar} \\
+& \text{origen} \to \text{dur\_60}\\
+& \text{modo\_ok} \to \text{dur\_60} \\
+& \text{automovil} \to \text{dur\_60} \\
+& \text{motorizado} \to \text{dur\_60} \\
+& \text{transporte\_escolar} \to \text{dur\_60}
+\end{aligned}
+
+# Dag 3 José Alfredo López
+
+```{r}
+dag_3 = empty.graph(nodes = c('sexo',
+'acto_religioso',
+'automovil',
+'motorizado',
+'dur_60',
+'es_sabado',
+'estrato_alto',
+'modo_ok',
+'st_cuauh',
+'origen',
+'destino',
+'transporte_escolar'
+))
+```
+
+```{r}
+arc_set = matrix(c('sexo', 'destino',
+                   'sexo', 'automovil',
+                   'estrato_alto', 'destino',
+                   'estrato_alto', 'origen',
+                   'estrato_alto', 'st_cuauh',
+                   'estrato_alto', 'automovil',
+                   'estrato_alto', 'modo_ok',
+                   'acto_religioso', 'destino',
+                   'acto_religioso', 'automovil',
+                   'destino', 'es_sabado',
+                   'destino', 'automovil',
+                   'destino', 'motorizado',
+                   'destino', 'transporte_escolar',
+                   'origen', 'st_cuauh',
+                   'origen', 'modo_ok',
+                   'automovil', 'dur_60',
+                   'motorizado', 'dur_60',
+                   'modo_ok', 'dur_60'),byrow = TRUE, ncol = 2,
+                 dimnames = list(NULL, c('from', 'to')))
+
+arcs(dag_3) = arc_set
+dag_3
+
+```
+
+```{r}
+graphviz.plot(dag_3, shape = "ellipse")
+```
+
+### Red Bayesiana
+
+```{r}
+bn_mle = bn.fit(dag_3, data=data, method = 'mle')
+```
+
+```{r}
+bn_mle
+```
+
+Probamos la significancia de las relaciones
+
+```{r}
+data_clean <- na.omit(data)
+score(dag_3, data = data_clean, type = "bic")
+score(dag_3, data = data_clean, type = "aic")
+```
+
+```{r}
+arc.strength(dag_3, data = data_clean, criterion = "mi")
+```
+
+### Independencias (arcos no significativos)
+
+$$
+\begin{aligned}
+& \text{sexo} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{estrato_alto} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{acto_religioso} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{destino} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{destino} \perp\!\!\!\perp \text{motorizado} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
+& \text{motorizado} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
+\end{aligned}
+$$
+### Dependencias (arcos significativos)
+
+$$
+\begin{aligned}
+& \text{sexo} \not\!\perp\!\!\!\perp \text{destino} : 8.65\times 10^{-163} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{destino} : 3.40\times 10^{-80} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{origen} : 1.84\times 10^{-265} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{st_cuauh} : 6.67\times 10^{-313} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{modo_ok} : 1.29\times 10^{-28} \\
+& \text{acto_religioso} \not\!\perp\!\!\!\perp \text{destino} : 0.0000000 \\
+& \text{destino} \not\!\perp\!\!\!\perp \text{es_sabado} : 0.0000000 \\
+& \text{destino} \not\!\perp\!\!\!\perp \text{transporte_escolar} : 3.27\times 10^{-69} \\
+& \text{origen} \not\!\perp\!\!\!\perp \text{st_cuauh} : 0.0000000 \\
+& \text{origen} \not\!\perp\!\!\!\perp \text{modo_ok} : 9.31\times 10^{-10} \\
+& \text{modo_ok} \not\!\perp\!\!\!\perp \text{dur_60} : 7.90\times 10^{-05} \\
+\end{aligned}
+$$
+
+
 ## Query 1
 
 ¿Cuál es la probabilidad de que el automóvil sea el medio de transporte de un hombre, dado que su propósito de viaje es ir a un acto religioso?
