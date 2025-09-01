@@ -10,3 +10,5 @@ data/
 # Outputs de Quarto
 *.html
 *_cache/
+=======
+.Rproj
