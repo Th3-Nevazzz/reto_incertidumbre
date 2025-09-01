@@ -68,6 +68,54 @@ names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
 
 head(data)
 ```
+## DAG 1
+```{r}
+nodes <- c("sexo", "acto_religioso", "Automovil", 
+           "modo_ok", "motorizado", "dur_60", 
+           "es_sabado", "estrato_alto")
+dag <- empty.graph(nodes = nodes)
+
+arc_set <- matrix(c(
+  "sexo", "Automovil",
+  "acto_religioso", "Automovil",
+  
+  "sexo", "modo_ok",
+  "estrato_alto", "modo_ok",
+  "es_sabado", "modo_ok",
+  "acto_religioso", "modo_ok",
+  
+  "Automovil", "motorizado",
+  "modo_ok", "motorizado",
+  
+  "motorizado", "dur_60",
+  "acto_religioso", "dur_60",
+  "es_sabado", "dur_60"
+), byrow = TRUE, ncol = 2,
+dimnames = list(NULL, c("from", "to")))
+
+arcs(dag) <- arc_set
+```
+
+```{r}
+graphviz.plot(dag, shape = "ellipse")
+
+```
+```{r}
+datos <- droplevels(na.omit(data))
+
+bn_dag1 <- bn.fit(dag, data = datos, method = "mle")
+bn_dag1
+```
+```{r}
+arc_strength_mi <- arc.strength(dag, data = datos, criterion = "mi")
+arc_strength_mi <- arc_strength_mi[order(-arc_strength_mi$strength), ]
+kable(arc_strength_mi, caption = "Arc strength (Mutual Information)")
+
+arc_strength_bic <- arc.strength(dag, data = datos, criterion = "bic")
+arc_strength_bic <- arc_strength_bic[order(arc_strength_bic$strength), ]
+kable(arc_strength_bic, caption = "Arc scores (BIC)")
+```
+
 
 ## Creacion DAG 2
 
@@ -175,7 +223,6 @@ Dados estos resultados podriamos eliminar los siguientes arcos ya que superan 0.
 & \text{transporte\_escolar} \to \text{dur\_60}
 \end{aligned}
 
-
 # Dag 3 José Alfredo López
 
 ```{r}
@@ -258,8 +305,12 @@ $$
 & \text{automovil} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
 & \text{motorizado} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
 \end{aligned}
+
+$$ \### Dependencias (arcos significativos)
+
 $$
 ### Dependencias (arcos significativos)
+
 
 $$
 \begin{aligned}
