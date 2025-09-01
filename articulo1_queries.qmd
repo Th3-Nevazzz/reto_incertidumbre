@@ -19,10 +19,12 @@ library(bnlearn)
 
 ```{r}
 data = read.csv('data/base_unida.csv',stringsAsFactors = TRUE)
-
-head(data)
-
 ```
+
+```{r}
+head(data)
+```
+
 ```{r}
 # Variables categóricas
 vars_factor <- c("tra_sexo", "via_p5_13", "tra_p5_14",
@@ -67,9 +69,111 @@ names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
 head(data)
 ```
 
+## Creacion DAG 2
 
+```{r}
+dag_2 <- empty.graph(nodes = c("sexo", "acto_religioso", "automovil", "motorizado",
+                               "dur_60", "es_sabado", "estrato_alto", "modo_ok",
+                               "origen", "destino", "transporte_escolar", "st_cuauh"))
 
+```
 
+```{r}
+arc_set_2 <- matrix(c(
+  "sexo", "automovil",
+  "estrato_alto", "automovil",
+  "acto_religioso", "automovil",
+  "es_sabado", "automovil",
+  "origen", "automovil",
+  "destino", "automovil",
+  
+  "origen", "modo_ok",
+  "destino", "modo_ok",
+  "es_sabado", "modo_ok",
+  "estrato_alto", "modo_ok",
+  
+  "automovil", "motorizado",
+  "modo_ok", "motorizado",
+  
+  "estrato_alto", "transporte_escolar",
+  "origen", "transporte_escolar",
+  "destino", "transporte_escolar",
+  
+  # Padres de duración
+  "origen", "dur_60",
+  "destino", "dur_60",
+  "modo_ok", "dur_60",
+  "automovil", "dur_60",
+  "motorizado", "dur_60",
+  "transporte_escolar", "dur_60"
+), byrow = TRUE, ncol = 2,
+dimnames = list(NULL, c("from", "to")))
+```
+
+```{r}
+arcs(dag_2) = arc_set_2
+graphviz.plot(dag_2, shape = "ellipse")
+```
+
+```{r}
+bn_2 = bn.fit(dag_2, data = data)
+```
+
+```{r}
+data_clean <- na.omit(data)
+score(dag_2, data = data_clean, type = "bic")
+score(dag_2, data = data_clean, type = "aic")
+```
+
+```{r}
+arc.strength(dag_2, data = data, criterion = "mi")
+```
+
+Tras realizar la fuerza de dependencia probabilista obtuvimos los siguientes resultados:
+
+\begin{aligned}
+& \text{automovil} \perp\!\!\!\perp \text{sexo} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{estrato\_alto} : 0.0147075 \\
+& \text{automovil} \perp\!\!\!\perp \text{acto\_religioso} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{es\_sabado} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{origen} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{destino} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{origen} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{destino} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{es\_sabado} : 1.0000000 \\
+& \text{modo\_ok} \perp\!\!\!\perp \text{estrato\_alto} : 1.0000000 \\
+& \text{motorizado} \perp\!\!\!\perp \text{automovil} : 0.0000000 \\
+& \text{motorizado} \perp\!\!\!\perp \text{modo\_ok} : 0.0000000 \\
+& \text{transporte\_escolar} \perp\!\!\!\perp \text{estrato\_alto} : 0.9999994 \\
+& \text{transporte\_escolar} \perp\!\!\!\perp \text{origen} : 0.0000000 \\
+& \text{transporte\_escolar} \perp\!\!\!\perp \text{destino} : 0.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{origen} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{destino} : 9.981721 \times 10^{-109} \\
+& \text{dur\_60} \perp\!\!\!\perp \text{modo\_ok} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{motorizado} : 1.0000000 \\
+& \text{dur\_60} \perp\!\!\!\perp \text{transporte\_escolar} : 1.0000000
+\end{aligned}
+
+Dados estos resultados podriamos eliminar los siguientes arcos ya que superan 0.05 haciendolos no significativos:
+
+\begin{aligned}
+& \text{sexo} \to \text{automovil}\\
+& \text{acto\_religioso} \to\text{automovil}\\
+& \text{es\_sabado} \to \text{automovil}\\
+& \text{origen} \to \text{automovil}\\
+& \text{destino} \to \text{automovil}\\
+& \text{origen} \to \text{modo\_ok}\\
+& \text{destino} \to \text{modo\_ok}\\
+& \text{es\_sabado} \to \text{modo\_ok}\\
+& \text{estrato\_alto} \to \text{modo\_ok} \\
+& \text{estrato\_alto} \to \text{transporte\_escolar} \\
+& \text{origen} \to \text{dur\_60}\\
+& \text{modo\_ok} \to \text{dur\_60} \\
+& \text{automovil} \to \text{dur\_60} \\
+& \text{motorizado} \to \text{dur\_60} \\
+& \text{transporte\_escolar} \to \text{dur\_60}
+\end{aligned}
 
 ## Query 1
 
