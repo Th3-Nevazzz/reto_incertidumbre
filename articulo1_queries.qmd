@@ -68,23 +68,25 @@ names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
 
 head(data)
 ```
-## DAG 1
+
+## DAG 1   
+
 ```{r}
-nodes <- c("sexo", "acto_religioso", "Automovil", 
+nodes <- c("sexo", "acto_religioso", "automovil", 
            "modo_ok", "motorizado", "dur_60", 
            "es_sabado", "estrato_alto")
 dag <- empty.graph(nodes = nodes)
 
 arc_set <- matrix(c(
-  "sexo", "Automovil",
-  "acto_religioso", "Automovil",
+  "sexo", "automovil",
+  "acto_religioso", "automovil",
   
   "sexo", "modo_ok",
   "estrato_alto", "modo_ok",
   "es_sabado", "modo_ok",
   "acto_religioso", "modo_ok",
   
-  "Automovil", "motorizado",
+  "automovil", "motorizado",
   "modo_ok", "motorizado",
   
   "motorizado", "dur_60",
@@ -100,22 +102,22 @@ arcs(dag) <- arc_set
 graphviz.plot(dag, shape = "ellipse")
 
 ```
+
 ```{r}
-datos <- droplevels(na.omit(data))
+datos <- na.omit(data[, nodes])
 
 bn_dag1 <- bn.fit(dag, data = datos, method = "mle")
-bn_dag1
 ```
+
 ```{r}
-arc_strength_mi <- arc.strength(dag, data = datos, criterion = "mi")
-arc_strength_mi <- arc_strength_mi[order(-arc_strength_mi$strength), ]
-kable(arc_strength_mi, caption = "Arc strength (Mutual Information)")
-
-arc_strength_bic <- arc.strength(dag, data = datos, criterion = "bic")
-arc_strength_bic <- arc_strength_bic[order(arc_strength_bic$strength), ]
-kable(arc_strength_bic, caption = "Arc scores (BIC)")
+data_clean <- na.omit(data)
+score(dag, data = datos, type = "bic")
+score(dag, data = datos, type = "aic")
 ```
 
+```{r}
+arc.strength(dag, data = datos, criterion = "mi")
+```
 
 ## Creacion DAG 2
 
@@ -147,7 +149,6 @@ arc_set_2 <- matrix(c(
   "origen", "transporte_escolar",
   "destino", "transporte_escolar",
   
-  # Padres de duración
   "origen", "dur_60",
   "destino", "dur_60",
   "modo_ok", "dur_60",
