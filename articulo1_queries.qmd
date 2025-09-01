@@ -11,6 +11,66 @@ editor: visual
 
 Equipo 7
 
+```{r}
+#setup global e importacion de librerias
+set.seed(1234) #utilizamos una semilla para reproductibilidad
+library(bnlearn)
+```
+
+```{r}
+data = read.csv('data/base_unida.csv',stringsAsFactors = TRUE)
+
+head(data)
+
+```
+```{r}
+# Variables categóricas
+vars_factor <- c("tra_sexo", "via_p5_13", "tra_p5_14",
+                 "tra_p5_3", "tra_estrato", "tra_p5_17_1c",
+                 "via_p5_6", "via_p5_11a", "via_p5_14_18")
+data[vars_factor] <- lapply(data[vars_factor], as.factor)
+
+# Crear variable binaria de duración (>1 hora)
+data$dur_60 <- ifelse(data$tra_p5_16_1_1 > 1, "Mayor_1h", "Menor_igual_1h")
+data$dur_60 <- factor(data$dur_60)
+
+# Variables derivadas de tra_p5_14 siendo estas: Automovil, Motorizado, modo_ok
+data$automovil <- ifelse(data$tra_p5_14 == 1, "Automovil", "No_Automovil") #saber si utiliza automovil
+data$automovil <- factor(data$automovil)
+
+data$motorizado <- ifelse(data$tra_p5_14 %in% 
+                            c(1,2,3,4,5,6,8,9,10,11,12,13,15,17,18,19,20), 
+                          "Motorizado", "No_motorizado") #saber si utiliza un vehiculo motorizado para viajar o no
+data$motorizado <- factor(data$motorizado)
+
+data$modo_ok <- ifelse(data$tra_p5_14 %in% c(6,12,13),
+                       as.character(data$tra_p5_14), "Otro") #identificar si utiliza transporte publico u otro vehiculo
+data$modo_ok <- factor(data$modo_ok)
+
+# Eliminar la columna original para evitar conflictos
+data$tra_p5_14 <- NULL
+data$tra_p5_16_1_1 <- NULL
+
+```
+
+```{r}
+# Renombrar columnas para evitar errores
+names(data)[names(data) == "tra_sexo"]     <- "sexo"
+names(data)[names(data) == "via_p5_13"]    <- "acto_religioso"
+names(data)[names(data) == "tra_estrato"]  <- "estrato_alto"
+names(data)[names(data) == "tra_p5_17_1c"] <- "st_cuauh"
+names(data)[names(data) == "tra_p5_3"]     <- "es_sabado"
+names(data)[names(data) == "via_p5_6"]     <- "origen"
+names(data)[names(data) == "via_p5_11a"]   <- "destino"
+names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
+
+head(data)
+```
+
+
+
+
+
 ## Query 1
 
 ¿Cuál es la probabilidad de que el automóvil sea el medio de transporte de un hombre, dado que su propósito de viaje es ir a un acto religioso?
