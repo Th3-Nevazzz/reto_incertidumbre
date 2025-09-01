@@ -68,6 +68,54 @@ names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
 
 head(data)
 ```
+## DAG 1
+```{r}
+nodes <- c("sexo", "acto_religioso", "Automovil", 
+           "modo_ok", "motorizado", "dur_60", 
+           "es_sabado", "estrato_alto")
+dag <- empty.graph(nodes = nodes)
+
+arc_set <- matrix(c(
+  "sexo", "Automovil",
+  "acto_religioso", "Automovil",
+  
+  "sexo", "modo_ok",
+  "estrato_alto", "modo_ok",
+  "es_sabado", "modo_ok",
+  "acto_religioso", "modo_ok",
+  
+  "Automovil", "motorizado",
+  "modo_ok", "motorizado",
+  
+  "motorizado", "dur_60",
+  "acto_religioso", "dur_60",
+  "es_sabado", "dur_60"
+), byrow = TRUE, ncol = 2,
+dimnames = list(NULL, c("from", "to")))
+
+arcs(dag) <- arc_set
+```
+
+```{r}
+graphviz.plot(dag, shape = "ellipse")
+
+```
+```{r}
+datos <- droplevels(na.omit(data))
+
+bn_dag1 <- bn.fit(dag, data = datos, method = "mle")
+bn_dag1
+```
+```{r}
+arc_strength_mi <- arc.strength(dag, data = datos, criterion = "mi")
+arc_strength_mi <- arc_strength_mi[order(-arc_strength_mi$strength), ]
+kable(arc_strength_mi, caption = "Arc strength (Mutual Information)")
+
+arc_strength_bic <- arc.strength(dag, data = datos, criterion = "bic")
+arc_strength_bic <- arc_strength_bic[order(arc_strength_bic$strength), ]
+kable(arc_strength_bic, caption = "Arc scores (BIC)")
+```
+
 
 ## Creacion DAG 2
 
@@ -174,6 +222,106 @@ Dados estos resultados podriamos eliminar los siguientes arcos ya que superan 0.
 & \text{motorizado} \to \text{dur\_60} \\
 & \text{transporte\_escolar} \to \text{dur\_60}
 \end{aligned}
+
+# Dag 3 José Alfredo López
+
+```{r}
+dag_3 = empty.graph(nodes = c('sexo',
+'acto_religioso',
+'automovil',
+'motorizado',
+'dur_60',
+'es_sabado',
+'estrato_alto',
+'modo_ok',
+'st_cuauh',
+'origen',
+'destino',
+'transporte_escolar'
+))
+```
+
+```{r}
+arc_set = matrix(c('sexo', 'destino',
+                   'sexo', 'automovil',
+                   'estrato_alto', 'destino',
+                   'estrato_alto', 'origen',
+                   'estrato_alto', 'st_cuauh',
+                   'estrato_alto', 'automovil',
+                   'estrato_alto', 'modo_ok',
+                   'acto_religioso', 'destino',
+                   'acto_religioso', 'automovil',
+                   'destino', 'es_sabado',
+                   'destino', 'automovil',
+                   'destino', 'motorizado',
+                   'destino', 'transporte_escolar',
+                   'origen', 'st_cuauh',
+                   'origen', 'modo_ok',
+                   'automovil', 'dur_60',
+                   'motorizado', 'dur_60',
+                   'modo_ok', 'dur_60'),byrow = TRUE, ncol = 2,
+                 dimnames = list(NULL, c('from', 'to')))
+
+arcs(dag_3) = arc_set
+dag_3
+
+```
+
+```{r}
+graphviz.plot(dag_3, shape = "ellipse")
+```
+
+### Red Bayesiana
+
+```{r}
+bn_mle = bn.fit(dag_3, data=data, method = 'mle')
+```
+
+```{r}
+bn_mle
+```
+
+Probamos la significancia de las relaciones
+
+```{r}
+data_clean <- na.omit(data)
+score(dag_3, data = data_clean, type = "bic")
+score(dag_3, data = data_clean, type = "aic")
+```
+
+```{r}
+arc.strength(dag_3, data = data_clean, criterion = "mi")
+```
+
+### Independencias (arcos no significativos)
+
+$$
+\begin{aligned}
+& \text{sexo} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{estrato_alto} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{acto_religioso} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{destino} \perp\!\!\!\perp \text{automovil} : 1.0000000 \\
+& \text{destino} \perp\!\!\!\perp \text{motorizado} : 1.0000000 \\
+& \text{automovil} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
+& \text{motorizado} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
+\end{aligned}
+$$ \### Dependencias (arcos significativos)
+
+$$
+\begin{aligned}
+& \text{sexo} \not\!\perp\!\!\!\perp \text{destino} : 8.65\times 10^{-163} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{destino} : 3.40\times 10^{-80} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{origen} : 1.84\times 10^{-265} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{st_cuauh} : 6.67\times 10^{-313} \\
+& \text{estrato_alto} \not\!\perp\!\!\!\perp \text{modo_ok} : 1.29\times 10^{-28} \\
+& \text{acto_religioso} \not\!\perp\!\!\!\perp \text{destino} : 0.0000000 \\
+& \text{destino} \not\!\perp\!\!\!\perp \text{es_sabado} : 0.0000000 \\
+& \text{destino} \not\!\perp\!\!\!\perp \text{transporte_escolar} : 3.27\times 10^{-69} \\
+& \text{origen} \not\!\perp\!\!\!\perp \text{st_cuauh} : 0.0000000 \\
+& \text{origen} \not\!\perp\!\!\!\perp \text{modo_ok} : 9.31\times 10^{-10} \\
+& \text{modo_ok} \not\!\perp\!\!\!\perp \text{dur_60} : 7.90\times 10^{-05} \\
+\end{aligned}
+$$
 
 ## Query 1
 
