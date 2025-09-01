@@ -305,7 +305,12 @@ $$
 & \text{automovil} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
 & \text{motorizado} \perp\!\!\!\perp \text{dur_60} : 1.0000000 \\
 \end{aligned}
+
 $$ \### Dependencias (arcos significativos)
+
+$$
+### Dependencias (arcos significativos)
+
 
 $$
 \begin{aligned}
