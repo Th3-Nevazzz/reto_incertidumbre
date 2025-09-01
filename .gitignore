@@ -2,5 +2,11 @@
 .Rhistory
 .RData
 .Ruserdata
+# Archivo personal de Damian
+articulo1_queries_dl.qmd
+# Data de Damian que no será usada
 data/
 .DS_Store
+# Outputs de Quarto
+*.html
+*_cache/
