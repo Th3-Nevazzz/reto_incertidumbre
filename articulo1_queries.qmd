@@ -69,7 +69,7 @@ names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
 head(data)
 ```
 
-## DAG 1
+## DAG 1   
 
 ```{r}
 nodes <- c("sexo", "acto_religioso", "automovil", 
