@@ -9,24 +9,6 @@ format: html
 editor: visual
 ---
 
-# Introducción
-
-La movilidad urbana en México enfrenta el reto de explicar cómo factores sociodemográficos, económicos y contextuales determinan tanto la elección del modo de transporte como la duración de los viajes. Estudios previos han mostrado la influencia del estrato socioeconómico y el género en los patrones de movilidad, pero los enfoques tradicionales suelen ser insuficientes para capturar las complejas dependencias entre múltiples variables.
-
-La Encuesta Origen Destino 2017 (INEGI) ofrece un panorama detallado de los motivos de viaje, tiempos de traslado y medios de transporte utilizados en áreas metropolitanas. En este trabajo, analizamos cómo el sexo, el estrato social, el día de la semana y motivaciones específicas como los viajes religiosos o escolares afectan la probabilidad de usar determinados modos de transporte y de realizar trayectos largos.
-
-Para ello empleamos redes bayesianas multinomiales, una herramienta que permite representar relaciones de dependencia mediante grafos dirigidos y estimar probabilidades condicionales bajo incertidumbre. Nuestra hipótesis es que estas interacciones no lineales entre factores sociales y contextuales pueden modelarse de forma más precisa con este enfoque, generando evidencia útil para la planificación del transporte y la formulación de políticas públicas de movilidad.
-
-# Metologia
-
-El trabajo se basó en el uso de redes bayesianas multinomiales para modelar dependencias entre variables sociodemográficas, contextuales y decisiones de transporte. El enfoque siguió un procedimiento reproducible en cuatro etapas principales.
-
-En primer lugar, se realizó una limpieza del archivo Excel original de la Encuesta Origen–Destino 2017, seleccionando únicamente las variables necesarias para el análisis y generando un nuevo archivo en formato .csv. Esto permitió trabajar con una base de datos depurada y de menor tamaño, enfocada en los atributos relevantes para el estudio.
-
-Posteriormente, las variables continuas se discretizaron en categorías de interés, entre ellas la duración de viaje mayor a 60 minutos (dur_60). Las variables cualitativas se transformaron en factores categóricos para garantizar compatibilidad con los algoritmos de bnlearn, incluyendo: sexo, acto_religioso, motorizado, automovil, modo_ok, es_sabado, origen, estrato_alto, st_cuauh, destino y transporte_escolar.
-
-De manera particular, la columna original “tra_p5_14”, que contenía información sobre los distintos modos de transporte, fue descompuesta en tres variables derivadas: automovil (uso o no de automóvil), motorizado (uso de cualquier modo motorizado) y `modo_ok` (identificación de transporte público: autobús, tren ligero o tren suburbano). Una vez generadas estas variables, la columna original fue eliminada para evitar redundancias.
-
 ```{r}
 set.seed(1234) 
 library(bnlearn)
@@ -84,11 +66,7 @@ names(data)[names(data) == "via_p5_14_18"] <- "transporte_escolar"
 head(data)
 ```
 
-Posteriormente, se propusieron tres grafos acíclicos dirigidos (DAGs) que reflejaban hipótesis alternativas sobre las dependencias causales. Cada DAG fue implementado en el entorno R utilizando la librería bnlearn.
-
 ## DAG 1
-
-El uso de automóvil está condicionado por el sexo y el acto religioso. La elección de transporte público (modo_ok, que incluye autobús, tren ligero y tren suburbano) depende de sexo, estrato socioeconómico, día de la semana (sábado) y acto religioso. Tanto automovil como modo_ok determinan si un viaje es motorizado. Finalmente, el hecho de ser motorizado, junto con acto religioso y es_sabado, afecta la probabilidad de que el viaje dure más de 60 minutos (dur_60).
 
 ```{r}
 nodes <- c("sexo", "acto_religioso", "automovil", 
@@ -139,8 +117,6 @@ arc.strength(dag, data = datos, criterion = "mi")
 ```
 
 ## DAG 2
-
-La variable automovil depende de sexo, estrato socioeconómico, acto religioso, día sábado, origen y destino. El modo_ok depende de origen, destino, es_sabado y estrato_alto. La condición de motorizado está determinada por automovil y modo_ok. El transporte_escolar depende de estrato socioeconómico, origen y destino. Finalmente, la duración del viaje (dur_60) está influida por origen, destino, modo_ok, automovil, motorizado y transporte_escolar.
 
 ```{r}
 dag_2 <- empty.graph(nodes = c("sexo", "acto_religioso", "automovil", "motorizado",
@@ -247,8 +223,6 @@ Dados estos resultados podriamos eliminar los siguientes arcos ya que superan 0.
 
 ## DAG 3
 
-La duración del viaje (dur_60) depende de automovil, motorizado y modo_ok. La variable automovil depende de acto religioso, sexo, destino y estrato socioeconómico. Tanto motorizado, es_sabado y transporte_escolar dependen de destino. El destino depende a su vez de acto religioso, sexo y estrato socioeconómico. El st_cuauh y el modo_ok dependen de origen y estrato socioeconómico, mientras que origen depende de estrato socioeconómico.
-
 ```{r}
 dag_3 = empty.graph(nodes = c('sexo',
 'acto_religioso',
@@ -294,10 +268,6 @@ dag_3
 ```{r}
 graphviz.plot(dag_3, shape = "ellipse")
 ```
-
-se realizó el ajuste de parámetros por máxima verosimilitud para cada DAG mediante la función bn.fit del paquete bnlearn, y se evaluó el desempeño de cada estructura utilizando los criterios de información Bayesian Information Criterion (BIC) y Akaike Information Criterion (AIC). Adicionalmente, se utilizó la función arc.strength para comprobar la independencia condicional de los arcos y determinar cuáles dependencias resultaban significativas.
-
-Basándonos en estos scores, la DAG 3 es la que presenta el mejor ajuste a los datos (valores menos negativos de BIC y AIC).
 
 ## Red Bayesiana
 
@@ -469,17 +439,7 @@ graphviz.plot(best_dag, shape = "ellipse", main = "DAG aprendida por Hill-Climbi
 modelstring(best_dag)
 ```
 
-Tras haber propuesto y ajustado tres DAGs distintos (DAG1, DAG2 y DAG3), se aplicó el algoritmo de Hill-Climbing para aprender automáticamente la estructura de la red a partir de los datos.
-
-En términos de ajuste estadístico, los resultados indican que Hill-Climbing logra un mejor ajuste (mayor BIC/AIC) en comparación con las estructuras propuestas manualmente.
-
-Sin embargo, al analizar la estructura aprendida (ver gráfica y modelo textual), observamos que el algoritmo conecta variables de forma que no siempre tienen sentido lógico ni causal en el contexto del transporte urbano. Por ejemplo, coloca a acto_religioso como nodo padre de variables como destino y transporte_escolar, lo cual difícilmente refleja una relación realista en la movilidad de la Ciudad de México.
-
-En conclusión, Hill-Climbing puede mejorar los criterios de ajuste estadístico, pero no garantiza interpretabilidad ni validez causal. Por ello, su resultado debe considerarse con precaución: es útil como referencia para comparar ajustes, pero la red propuesta manualmente por los expertos (en este caso, los DAGs diseñados en clase) conserva mayor coherencia en cuanto a la lógica de las relaciones.
-
 # Aplicacion
-
-La validación de los modelos se llevó a cabo a través del cálculo de probabilidades condicionales sobre escenarios de interés en movilidad urbana. Para ello se definieron queries específicas, orientadas a responder preguntas de política pública y patrones de comportamiento: uso del automóvil en viajes religiosos, relación entre duración y transporte motorizado, duración de viajes escolares, y uso del transporte público en población de estrato alto en Cuauhtémoc durante fines de semana.
 
 ## Query 1
 
@@ -492,8 +452,6 @@ cpquery(bn_mle,
   n = 10^6
 )
 ```
-
-La probabilidad estimada de que un hombre utilice automóvil cuando el motivo del viaje es religioso es de 20.6%. Este resultado refleja que, aunque el automóvil se usa en parte de los desplazamientos hacia actividades religiosas, la mayoría de los viajes de este tipo se realizan mediante otros medios (posiblemente transporte público o caminata). Esto sugiere que el factor religioso no está fuertemente asociado con la elección del automóvil en comparación con otras variables contextuales.
 
 ## Query 2
 
@@ -522,8 +480,6 @@ p_no_motorizado
 
 ```
 
-Condicionado a trayectos mayores a 60 minutos, la probabilidad de usar un medio motorizado es de 80.9%, mientras que para un medio no motorizado es de apenas 19.3%. Este hallazgo confirma la expectativa de que los viajes largos en la Ciudad de México dependen casi siempre de modos motorizados, dada la dificultad de sostener recorridos extensos a pie o en bicicleta. Además, la razón de probabilidades muestra una clara ventaja del transporte motorizado frente al no motorizado.
-
 ## Query 3
 
 ¿Cuál es la probabilidad de que el viaje del hogar a la escuela dure más de 60 minutos si la persona usa transporte escolar?
@@ -535,11 +491,7 @@ q3 <- cpquery(bn_mle,
 q3
 ```
 
-La probabilidad de que un viaje del hogar a la escuela dure más de 60 minutos cuando se utiliza transporte escolar es de apenas 1.9%. Esto indica que, en la mayoría de los casos, el transporte escolar está asociado con recorridos relativamente cortos, probablemente debido a la planeación de rutas locales y a la cercanía entre las viviendas y los centros educativos.
-
 ## Query 4
-
-Finalmente, en la cuarta query se estimó la probabilidad de que personas de estrato alto utilicen transporte público (tren suburbano, tren ligero o autobús) durante los sábados en la alcaldía Cuauhtémoc.
 
 La query original planteada para el equipo fue:
 
@@ -553,8 +505,6 @@ De este modo, la query final utilizada en el análisis fue:
 
 ¿Qué probabilidad hay que una persona de estrato alto haya subido al transporte público (tren suburbano, tren ligero y autobús) en una estación que corresponde a la alcaldía Cuauhtémoc durante los sábados?
 
-Este cambio asegura la coherencia entre la pregunta de investigación y la información disponible en la base de datos, permitiendo calcular una probabilidad válida y consistente.
-
 ```{r}
 cpquery(
   bn_mle,
@@ -563,17 +513,3 @@ cpquery(
   n = 10^6
 )
 ```
-
-La probabilidad de que individuos de estrato alto en la alcaldía Cuauhtémoc utilicen transporte público (autobús, tren ligero o tren suburbano) durante los sábados es de 2.1%. Este valor, muy bajo, refleja la fuerte preferencia de los sectores de mayor ingreso por modos privados de transporte, principalmente el automóvil, y sugiere desigualdades persistentes en el acceso y uso del transporte público.
-
-# Conclusiones
-
-El estudio aplicó redes bayesianas multinomiales para analizar la movilidad urbana en la Ciudad de México con base en la Encuesta Origen–Destino 2017. Se probaron tres estructuras iniciales (DAG1, DAG2 y DAG3) y se compararon con el algoritmo Hill-Climbing. Aunque Hill-Climbing alcanzó mejores valores de BIC y AIC, generó relaciones poco lógicas, por lo que se eligió la DAG3 como modelo más coherente para interpretar los datos.
-
-Las consultas realizadas mostraron patrones claros. La probabilidad de que un hombre use automóvil en viajes religiosos fue baja (20.6%), mientras que en los trayectos mayores a una hora predominó el transporte motorizado (80.9% frente a 19.3% no motorizado). El transporte escolar presentó una probabilidad mínima de viajes largos (1.9%), lo que refleja su carácter local, y el estrato alto en Cuauhtémoc tuvo una probabilidad muy baja de usar transporte público en sábado (2.1%).
-
-Estos resultados confirman desigualdades en la elección modal y refuerzan la importancia de métodos probabilísticos para analizar relaciones complejas. Entre las limitaciones se encuentra la necesidad de discretizar y simplificar variables, lo que puede reducir detalles del fenómeno. A futuro, conviene probar más variables y técnicas que combinen buen ajuste estadístico con interpretaciones más realistas.
-
-# Referencias
-
-Scutari, M. (s.f.). bnlearn: Bayesian network structure learning, parameter learning and inference. Recuperado el 31 de agosto de 2025, de <https://www.bnlearn.com/>
